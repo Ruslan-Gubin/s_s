@@ -23,9 +23,8 @@ const handleClose = (done: () => void) => {
 }
 
 
-
-const saveChangeInput = (id: number, field: string, value: string) => {
-  const isValid = value.length > 0 && value.length < 101;
+const saveChangeInput = (id: number, field: string, value: string | null) => {
+  const isValid = value && value.length > 0 && value.length < 101;
 
   if (isValid) {
     accountsStore.saveAccountField(id, field, value);
