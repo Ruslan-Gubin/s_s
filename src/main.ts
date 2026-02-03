@@ -4,9 +4,15 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
+import { createPersistedState } from 'pinia-plugin-persistence'
 
-const pinia = createPinia()
-const app = createApp(App)
+const pinia = createPinia();
+
+pinia.use(createPersistedState({
+  key: id => `__persisted__${id}`,
+}))
+
+const app = createApp(App);
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)

@@ -2,22 +2,27 @@
 import { ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useAccountsStore } from '../stores/accounts';
-import { EVENT_CODE } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
 import { Delete } from '@element-plus/icons-vue';
+import { options } from '../constants/options';
 
 const accountsStore = useAccountsStore();
 const { accounts } = storeToRefs(accountsStore);
 
-const options = [
-  {
-    value: 'local',
-    label: 'Локальная',
-  },
-  {
-    value: 'ldap',
-    label: 'LDAP',
-  },
-];
+const deleteAccountId = ref(0);
+const dialogVisible = ref(false);
+
+const handleClose = (done: () => void) => {
+  ElMessageBox.confirm('Вы действительно хотите удалить?')
+    .then(() => {
+      done()
+    })
+    .catch((error) => {
+      console.error("Error:", error)
+    })
+}
+
+
 
 const saveChangeInput = (id: number, field: string, value: string) => {
   const isValid = value.length > 0 && value.length < 101;
@@ -112,7 +117,8 @@ const handleChangeTags = (id: number, tags: string[]) => {
 
     <el-table-column min-width="60" label="">
       <template #default="scope">
-        <el-button type="danger" :icon="Delete" circle @click="accountsStore.removeAccount(scope.row.id)" />
+        <el-button type="danger" :icon="Delete" circle
+          @click="handleClose(() => accountsStore.removeAccount(scope.row.id))" />
       </template>
     </el-table-column>
   </el-table>

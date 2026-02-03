@@ -9,6 +9,7 @@ export const useAccountsStore = defineStore('accounts', {
   state: (): State => ({
     accounts: [],
   }),
+persist: true,
 
   actions: {
     addNewAccount() {
