@@ -1,10 +1,9 @@
 <script setup>
+import { useAccountsStore } from '../stores/accounts';
 import Hint from '../components/Hint.vue';
 import Accounts from '../components/Accounts.vue';
 
-const addNewAccount = () => {
-  console.log('add new account')
-}
+const accounts = useAccountsStore();
 
 </script>
 
@@ -12,7 +11,7 @@ const addNewAccount = () => {
   <section class="wrapper">
     <header class="header">
       <el-text class=" title" size="large">Учетные записи</el-text>
-      <el-button size="large" type="primary">Добавить</el-button>
+      <el-button @click="accounts.addNewAccount" size="large" type="primary">Добавить</el-button>
     </header>
 
     <div class="content">

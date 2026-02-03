@@ -1,58 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useAccountsStore } from '../stores/accounts';
 import { EVENT_CODE } from 'element-plus';
 import { Delete } from '@element-plus/icons-vue';
 
-interface AccountModel {
-  id: number;
-  tags: string[];
-  recordType: 'local' | 'ldap',
-  login: string;
-  password: string | null,
-};
-
-
-const props = defineProps<{ accountList: AccountModel[] }>();
-
-
-const handleDelete = (id: number,) => {
-  console.log(id)
-};
-
-const accountList = ref<AccountModel[]>([
-  {
-    id: 1,
-    tags: ['tag1', 'tag2', 'tag3'],
-    recordType: 'local',
-    login: "",
-    password: null,
-    isShowPassword: true,
-  },
-  {
-    id: 2,
-    tags: ['tag1', 'tag2', 'tag3'],
-    recordType: 'ldap',
-    login: "",
-    password: null,
-    isShowPassword: false,
-  },
-  {
-    id: 3,
-    tags: ['tag1', 'tag2', 'tag3'],
-    recordType: 'local',
-    login: "",
-    password: null,
-    isShowPassword: true,
-  },
-  {
-    id: 4,
-    tags: ['tag1', 'tag2', 'tag3'],
-    recordType: 'ldap',
-    login: "",
-    password: null,
-    isShowPassword: false,
-  },
-]);
+const accountsStore = useAccountsStore();
+const { accounts } = storeToRefs(accountsStore);
 
 const options = [
   {
@@ -65,11 +19,23 @@ const options = [
   },
 ];
 
+const saveChangeInput = (id: number, field: string, value: string) => {
+  const isValid = value.length > 0 && value.length < 101;
 
-const saveChangeInput = (e) => {
-  console.log('saveChangeInput:', e.target.value)
+  if (isValid) {
+    accountsStore.saveAccountField(id, field, value);
+  } else {
+    accountsStore.activeError(id, field);
+  }
 };
 
+const changeType = (value: string, id: number) => {
+  accountsStore.saveAccountField(id, 'recordType', value);
+
+  if (value === 'ldap') {
+    accountsStore.resetPassword(id);
+  }
+};
 
 const handleKeyInputTags = (e) => {
   const isAddTag = e.code === 'Semicolon';
@@ -90,41 +56,30 @@ const handleKeyInputTags = (e) => {
   }
 };
 
-const handleSaveTag = (e) => {
-  const tagsString: string = e.target.dataset.tags ?? '';
-  const convertTagsArray = tagsString.split(',');
-  const correctStringLength = tagsString.length - (convertTagsArray.length - 1);
-  const tagId: number = e.target.dataset.id ?? '';
+const handleChangeTags = (id: number, tags: string[]) => {
+  const totalChar = tags.reduce((acc, el) => acc + el.length, 0);
 
-  if (correctStringLength > 50) {
-    console.error('Error')
+  const isValid = totalChar <= 50;
+
+  if (isValid) {
+    accountsStore.saveAccountField(id, 'tags', tags);
   } else {
-    console.log(tagId)
+    accountsStore.activeError(id, "tags");
   }
-}
-
-const handleRemoveTag = (value, id) => {
-  console.log('clear', value, id)
 };
-
-const changeType = (value: string, id: number) => {
-  if (value === 'ldap') {
-    console.log('type:', value, id)
-    //change password = null;
-  }
-}
 
 </script>
 
 <template>
-  <el-table :data="accountList" class="table" border>
+  <el-table :data="accounts" class="table" border>
 
     <el-table-column label="Метки" width="260">
       <template #default="scope" ">
-        <el-input-tag @remove-tag="(tag) => handleRemoveTag(tag, scope.row.id)" :data-id="scope.row.id"
-        :data-tags="scope.row.tags"
-        @keypress="handleKeyInputTags" v-model="scope.row.tags" @blur="handleSaveTag" maxlength="50"
-        placeholder="Укажите метки" />
+        <div :class="scope.row.errorFields.includes('tags') ? 'error' : ''">
+        <el-input-tag @change="(tags) => handleChangeTags(scope.row.id, tags)"
+        @keypress="handleKeyInputTags" v-model="scope.row.tags"
+        maxlength="50" placeholder="Укажите метки" />
+        </div>
       </template>
     </el-table-column>
 
@@ -138,22 +93,26 @@ const changeType = (value: string, id: number) => {
 
     <el-table-column label="Логин" width="260">
       <template #default="scope">
-        <div class="error">
-          <el-input min="1" v-model="scope.row.login" placeholder="Введите логин" minlength="1" maxlength="100" />
+        <div :class="scope.row.errorFields.includes('login') ? 'error' : ''">
+          <el-input @blur="saveChangeInput(scope.row.id, 'login', scope.row.login)" min="1" v-model="scope.row.login"
+            placeholder="Введите логин" minlength="1" maxlength="100" />
         </div>
       </template>
     </el-table-column>
 
     <el-table-column label="Пароль" width="260">
       <template #default="scope">
-        <el-input v-if="scope.row.recordType === 'local'" v-model="scope.row.password" min="1" type="password"
-          placeholder="Введите пароль" show-password maxlength="100" />
+        <div :class="scope.row.errorFields.includes('password') ? 'error' : ''">
+          <el-input @blur="saveChangeInput(scope.row.id, 'password', scope.row.password)"
+            v-if="scope.row.recordType === 'local'" v-model="scope.row.password" min="1" type="password"
+            placeholder="Введите пароль" show-password maxlength="100" />
+        </div>
       </template>
     </el-table-column>
 
     <el-table-column min-width="60" label="">
       <template #default="scope">
-        <el-button type="danger" :icon="Delete" circle @click="handleDelete(scope.row.id)" />
+        <el-button type="danger" :icon="Delete" circle @click="accountsStore.removeAccount(scope.row.id)" />
       </template>
     </el-table-column>
   </el-table>
@@ -169,6 +128,23 @@ const changeType = (value: string, id: number) => {
 
 .error {
   border-radius: 4px;
-  border: 1px solid #e47673;
+  animation: errorAnimation 2s linear 0s infinite normal forwards;
+}
+
+@keyframes errorAnimation {
+
+  0% {
+    box-shadow: 1px 3px 2px 3px #e47673;
+  }
+
+  70% {
+    box-shadow: 1px 1px 3px 1px #e47673;
+  }
+
+
+  100% {
+
+    box-shadow: 1px 1px 5px 1px transparent;
+  }
 }
 </style>
